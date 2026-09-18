@@ -1,0 +1,147 @@
+{
+  "name": "SqlDataWarehouse_Ingest",
+  "properties": {
+    "description": "GitHub -> ADLS raw ingestion for CRM + ERP source files. Same pattern as the Netflix1 pipeline (Web metadata -> Set variable -> Validation -> ForEach -> Copy), run twice in parallel for the two source systems.",
+    "parameters": {
+      "github_repo_api_base": {
+        "type": "string",
+        "defaultValue": "https://api.github.com/repos/<your-username>/<your-repo>/contents/datasets"
+      },
+      "github_raw_base": {
+        "type": "string",
+        "defaultValue": "https://raw.githubusercontent.com/<your-username>/<your-repo>/main/datasets"
+      },
+      "adls_raw_container": {
+        "type": "string",
+        "defaultValue": "raw"
+      }
+    },
+    "activities": [
+      {
+        "name": "GithubMetadata_CRM",
+        "type": "WebActivity",
+        "typeProperties": {
+          "url": "@concat(pipeline().parameters.github_repo_api_base, '/source_crm')",
+          "method": "GET",
+          "headers": { "User-Agent": "ADF" }
+        }
+      },
+      {
+        "name": "SetVariable_CRM_Files",
+        "type": "SetVariable",
+        "dependsOn": [{ "activity": "GithubMetadata_CRM", "dependencyConditions": ["Succeeded"] }],
+        "typeProperties": {
+          "variableName": "crmFiles",
+          "value": "@activity('GithubMetadata_CRM').output"
+        }
+      },
+      {
+        "name": "ValidationGithub_CRM",
+        "type": "ValidationActivity",
+        "dependsOn": [{ "activity": "SetVariable_CRM_Files", "dependencyConditions": ["Succeeded"] }],
+        "typeProperties": {
+          "dataset": { "referenceName": "DS_Github_CRM_Listing", "type": "DatasetReference" },
+          "timeout": "0.00:05:00",
+          "sleep": 5
+        }
+      },
+      {
+        "name": "ForAllCrmFiles",
+        "type": "ForEach",
+        "dependsOn": [{ "activity": "ValidationGithub_CRM", "dependencyConditions": ["Succeeded"] }],
+        "typeProperties": {
+          "items": { "value": "@variables('crmFiles')", "type": "Expression" },
+          "activities": [
+            {
+              "name": "Copy_Github_CRM_File",
+              "type": "Copy",
+              "typeProperties": {
+                "source": {
+                  "type": "HttpSource",
+                  "httpRequestTimeout": "00:01:40"
+                },
+                "sink": {
+                  "type": "DelimitedTextSink",
+                  "storeSettings": { "type": "AzureBlobFSWriteSettings" }
+                }
+              },
+              "inputs": [{ "referenceName": "DS_Github_Raw_File", "type": "DatasetReference",
+                "parameters": { "fileUrl": "@concat(pipeline().parameters.github_raw_base, '/source_crm/', item().name)" } }],
+              "outputs": [{ "referenceName": "DS_ADLS_Raw_CRM", "type": "DatasetReference",
+                "parameters": { "fileName": "@item().name" } }]
+            }
+          ]
+        }
+      },
+      {
+        "name": "GithubMetadata_ERP",
+        "type": "WebActivity",
+        "typeProperties": {
+          "url": "@concat(pipeline().parameters.github_repo_api_base, '/source_erp')",
+          "method": "GET",
+          "headers": { "User-Agent": "ADF" }
+        }
+      },
+      {
+        "name": "SetVariable_ERP_Files",
+        "type": "SetVariable",
+        "dependsOn": [{ "activity": "GithubMetadata_ERP", "dependencyConditions": ["Succeeded"] }],
+        "typeProperties": {
+          "variableName": "erpFiles",
+          "value": "@activity('GithubMetadata_ERP').output"
+        }
+      },
+      {
+        "name": "ValidationGithub_ERP",
+        "type": "ValidationActivity",
+        "dependsOn": [{ "activity": "SetVariable_ERP_Files", "dependencyConditions": ["Succeeded"] }],
+        "typeProperties": {
+          "dataset": { "referenceName": "DS_Github_ERP_Listing", "type": "DatasetReference" },
+          "timeout": "0.00:05:00",
+          "sleep": 5
+        }
+      },
+      {
+        "name": "ForAllErpFiles",
+        "type": "ForEach",
+        "dependsOn": [{ "activity": "ValidationGithub_ERP", "dependencyConditions": ["Succeeded"] }],
+        "typeProperties": {
+          "items": { "value": "@variables('erpFiles')", "type": "Expression" },
+          "activities": [
+            {
+              "name": "Copy_Github_ERP_File",
+              "type": "Copy",
+              "typeProperties": {
+                "source": { "type": "HttpSource", "httpRequestTimeout": "00:01:40" },
+                "sink": {
+                  "type": "DelimitedTextSink",
+                  "storeSettings": { "type": "AzureBlobFSWriteSettings" }
+                }
+              },
+              "inputs": [{ "referenceName": "DS_Github_Raw_File", "type": "DatasetReference",
+                "parameters": { "fileUrl": "@concat(pipeline().parameters.github_raw_base, '/source_erp/', item().name)" } }],
+              "outputs": [{ "referenceName": "DS_ADLS_Raw_ERP", "type": "DatasetReference",
+                "parameters": { "fileName": "@item().name" } }]
+            }
+          ]
+        }
+      },
+      {
+        "name": "Trigger_Databricks_Autoloader_Job",
+        "type": "DatabricksNotebook",
+        "dependsOn": [
+          { "activity": "ForAllCrmFiles", "dependencyConditions": ["Succeeded"] },
+          { "activity": "ForAllErpFiles", "dependencyConditions": ["Succeeded"] }
+        ],
+        "typeProperties": {
+          "notebookPath": "/Repos/<your-workspace-path>/1_Autoloader_Bronze"
+        },
+        "linkedServiceName": { "referenceName": "AzureDatabricks_LinkedService", "type": "LinkedServiceReference" }
+      }
+    ],
+    "variables": {
+      "crmFiles": { "type": "Array" },
+      "erpFiles": { "type": "Array" }
+    }
+  }
+}
