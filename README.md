@@ -1,4 +1,4 @@
-# 🚀 CRM & ERP Data Warehouse
+# 🚀 RetailSalesDW-Azure-Data-Engineering-Project
 
 <div align="center">
 
