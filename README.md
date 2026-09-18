@@ -704,7 +704,7 @@ This project is intended for educational and portfolio purposes.
 
 <div align="center">
 
-### 👨‍💻 Developed by **Lokesh Avulapati**
+### 👨‍💻 Developed by **Kiran Avulapati**
 
 **Azure Data Engineering • Databricks • PySpark • Data Warehousing**
 
