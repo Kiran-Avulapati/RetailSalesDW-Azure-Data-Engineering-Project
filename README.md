@@ -46,6 +46,7 @@ The final **Gold layer** is built using **Delta Live Tables (DLT)** and provides
 ---
 
 # 🏗️ Architecture
+<img width="1079" height="380" alt="image" src="https://github.com/user-attachments/assets/99d2d4b1-6d44-4566-baf0-ea561778b278" />
 
 ```text
 ┌──────────────────────────────────────────────────────────────┐
