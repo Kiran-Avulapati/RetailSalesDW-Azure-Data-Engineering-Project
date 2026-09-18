@@ -46,7 +46,8 @@ The final **Gold layer** is built using **Delta Live Tables (DLT)** and provides
 ---
 
 # 🏗️ Architecture
-<img width="1079" height="380" alt="image" src="https://github.com/user-attachments/assets/99d2d4b1-6d44-4566-baf0-ea561778b278" />
+<img width="1536" height="1024" alt="ChatGPT Image Sep 18, 2026, 03_18_01 PM" src="https://github.com/user-attachments/assets/fe802819-cb16-4e9e-8d46-26bbef2db50c" />
+
 
 ```text
 ┌──────────────────────────────────────────────────────────────┐
